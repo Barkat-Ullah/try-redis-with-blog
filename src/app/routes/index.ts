@@ -8,6 +8,7 @@ import { AuthRouters } from '../modules/Auth/Auth.routes';
 import { PaymentRoutes } from '../modules/Payment/payment.route';
 import { FollowRoutes } from '../modules/follow/follow.routes';
 import { BlogRoutes } from '../modules/blog/blog.routes';
+import { CommentRoutes } from '../modules/comment/comment.routes';
 
 const router = express.Router();
 
@@ -19,6 +20,10 @@ const moduleRoutes = [
   {
     path: '/blog',
     route: BlogRoutes,
+  },
+  {
+    path: '/comments',
+    route: CommentRoutes,
   },
 
   {

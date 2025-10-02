@@ -131,17 +131,43 @@ const getAllBlog = async (query: Record<string, any>) => {
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, fullName: true, email: true } } },
+      include: {
+        user: {
+          select: { id: true, fullName: true, email: true },
+        },
+        comments: {
+          where: { isDeleted: false },
+          include: {
+            user: {
+              select: { id: true, fullName: true, email: true, profile: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     }),
     prisma.blogs.count({ where: { published: true, isDeleted: false } }),
   ]);
 
+
+  const enrichedBlogs = blogs.map(blog => {
+    const uniqueCommentUsers = new Set(blog.comments.map(c => c.userId));
+    return {
+      ...blog,
+      stats: {
+        totalViews: blog.views,
+        totalLikes: blog.likes,
+        uniqueCommenters: uniqueCommentUsers.size,
+      },
+    };
+  });
+
   const result = {
-    blogs,
+    blogs: enrichedBlogs,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   };
-  await safeRedisSet(cacheKey, CacheTTL.list, JSON.stringify(result));
 
+  await safeRedisSet(cacheKey, CacheTTL.list, JSON.stringify(result));
   return result;
 };
 
@@ -151,11 +177,18 @@ const getMyBlog = async (userId: string) => {
   const cached = await safeRedisGet(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const blogs = await prisma.blogs.findMany({
-    where: { userId, isDeleted: false },
-    orderBy: { createdAt: 'desc' },
-    include: { user: { select: { id: true, fullName: true, email: true } } },
-  });
+ const blogs = await prisma.blogs.findMany({
+   where: { userId, isDeleted: false },
+   orderBy: { createdAt: 'desc' },
+   include: {
+     user: { select: { id: true, fullName: true, email: true } },
+     comments: {
+       where: { isDeleted: false },
+       include: { user: { select: { id: true, fullName: true, email: true } } },
+       orderBy: { createdAt: 'desc' },
+     },
+   },
+ });
 
   await safeRedisSet(cacheKey, CacheTTL.blog, JSON.stringify(blogs));
   return blogs;
@@ -176,10 +209,18 @@ const getBlog = async ({ id, slug }: { id?: string; slug?: string }) => {
     return blog;
   }
 
-  const blog = await prisma.blogs.findFirst({
-    where: id ? { id } : { slug },
-    include: { user: { select: { id: true, fullName: true, email: true } } },
-  });
+ const blog = await prisma.blogs.findFirst({
+   where: id ? { id } : { slug },
+   include: {
+     user: { select: { id: true, fullName: true, email: true } },
+     comments: {
+       where: { isDeleted: false },
+       include: { user: { select: { id: true, fullName: true, email: true } } },
+       orderBy: { createdAt: 'desc' },
+     },
+   },
+ });
+
 
   if (!blog || blog.isDeleted)
     throw new AppError(httpStatus.NOT_FOUND, 'Blog not found');
@@ -325,12 +366,18 @@ const getTrendingBlogs = async (limit = 10) => {
   const cached = await safeRedisGet(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const blogs = await prisma.blogs.findMany({
-    where: { published: true, isDeleted: false },
-    orderBy: [{ views: 'desc' }, { likes: 'desc' }],
-    take: limit,
-    include: { user: { select: { id: true, fullName: true, email: true } } },
-  });
+const blogs = await prisma.blogs.findMany({
+  where: { published: true, isDeleted: false },
+  orderBy: [{ views: 'desc' }, { likes: 'desc' }],
+  take: limit,
+  include: {
+    user: { select: { id: true, fullName: true, email: true } },
+    comments: {
+      where: { isDeleted: false },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
+    },
+  },
+});
 
   await safeRedisSet(cacheKey, CacheTTL.trending, JSON.stringify(blogs));
   return blogs;
@@ -342,11 +389,17 @@ const searchByTags = async (tags: string[]) => {
   const cached = await safeRedisGet(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const blogs = await prisma.blogs.findMany({
-    where: { tags: { hasSome: tags }, published: true, isDeleted: false },
-    orderBy: { createdAt: 'desc' },
-    include: { user: { select: { id: true, fullName: true, email: true } } },
-  });
+const blogs = await prisma.blogs.findMany({
+  where: { tags: { hasSome: tags }, published: true, isDeleted: false },
+  orderBy: { createdAt: 'desc' },
+  include: {
+    user: { select: { id: true, fullName: true, email: true } },
+    comments: {
+      where: { isDeleted: false },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
+    },
+  },
+});
 
   await safeRedisSet(cacheKey, CacheTTL.list, JSON.stringify(blogs));
   return blogs;

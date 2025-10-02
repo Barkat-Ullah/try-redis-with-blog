@@ -19,9 +19,10 @@ model User {
   payments      Payment[]
   notifications NotificationUser[]
 
-  followers Follow[] @relation("Followers")
-  following Follow[] @relation("Following")
-  blogs Blogs[]
+  followers Follow[]  @relation("Followers")
+  following Follow[]  @relation("Following")
+  blogs     Blogs[]
+  comments  Comment[] @relation("UserComments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
