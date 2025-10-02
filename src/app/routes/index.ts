@@ -1,6 +1,5 @@
 import express from 'express';
 
-
 import { NotificationsRouters } from '../modules/Notification/notification.route';
 
 import { AssetRouters } from '../modules/Asset/asset.route';

@@ -4,8 +4,9 @@ import { Secret } from 'jsonwebtoken';
 import config from '../../config';
 import AppError from '../errors/AppError';
 import { UserRoleEnum, UserStatus } from '@prisma/client';
-import { insecurePrisma } from '../utils/prisma';
+
 import { verifyToken } from '../utils/verifyToken';
+import { prisma } from '../utils/prisma';
 
 type TupleHasDuplicate<T extends readonly unknown[]> = T extends [
   infer F,
@@ -35,7 +36,7 @@ const auth = <T extends readonly (UserRoleEnum | 'ANY')[]>(
       );
 
       // Check user is exist
-      const user = await insecurePrisma.user.findUniqueOrThrow({
+      const user = await prisma.user.findUniqueOrThrow({
         where: {
           id: verifyUserToken.id,
         },

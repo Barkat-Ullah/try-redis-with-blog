@@ -42,6 +42,7 @@ const getAllBlog = catchAsync(async (req: Request, res: Response) => {
  * Redis: User specific blogs cache করে
  */
 const getMyBlog = catchAsync(async (req: Request, res: Response) => {
+
   const result = await BlogServices.getMyBlog(req.user.id);
 
   sendResponse(res, {
@@ -138,7 +139,7 @@ const softDeleteIntoDb = catchAsync(async (req: Request, res: Response) => {
  */
 const likeBlog = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = req.user?.id || req.body.userId;
+  const userId = req.user?.id ;
 
   const result = await BlogServices.likeBlog(id, userId);
 
